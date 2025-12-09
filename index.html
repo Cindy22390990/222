@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>怨宅：第13雙眼睛 (重製版)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
+
+        body {
+            background-color: #050505;
+            color: #dcdcdc;
+            font-family: 'Noto Serif TC', serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 600px;
+            height: 100vh;
+            background: #000;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #222;
+            border-right: 1px solid #222;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+        }
+
+        /* Vignette Effect */
+        .vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 0 0 150px rgba(0,0,0,1);
+            pointer-events: none;
+            z-index: 5;
+            transition: box-shadow 2s;
+        }
+
+        .blood-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 40%, rgba(180, 0, 0, 0.6) 100%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 6;
+            transition: opacity 0.5s;
+        }
+
+        /* Scene Area */
+        #scene-area {
+            flex: 1;
+            padding: 40px 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            scrollbar-width: none; /* Firefox */
+        }
+        #scene-area::-webkit-scrollbar { display: none; } /* Chrome */
+
+        .location-title {
+            color: #555;
+            font-size: 0.9rem;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            text-align: center;
+            border-bottom: 1px solid #222;
+            padding-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .story-text {
+            font-size: 1.1rem;
+            line-height: 1.9;
+            margin-bottom: 20px;
+            text-align: justify;
+            transition: color 0.3s;
+            color: #bbb;
+        }
+
+        .highlight {
+            color: #c0392b;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(192, 57, 43, 0.3);
+        }
+
+        .clue {
+            color: #f39c12;
+            font-weight: bold;
+            border-bottom: 1px dotted #f39c12;
+        }
+
+        /* Inventory */
+        #inventory-bar {
+            height: 70px;
+            background: #0f0f0f;
+            border-top: 1px solid #333;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 15px;
+            overflow-x: auto;
+        }
+
+        .inv-item {
+            width: 45px;
+            height: 45px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.4rem;
+            border-radius: 5px;
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+        }
+        
+        .inv-item:hover {
+            border-color: #777;
+            background: #2a2a2a;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #222;
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            z-index: 20;
+            border: 1px solid #444;
+        }
+
+        /* Choice Buttons */
+        #choices-area {
+            padding: 20px;
+            background: #080808;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 10;
+        }
+
+        .choice-btn {
+            background: linear-gradient(90deg, transparent 0%, rgba(20,20,20,0.5) 100%);
+            border: 1px solid #333;
+            border-left: 3px solid #333;
+            color: #999;
+            padding: 15px 20px;
+            font-size: 1rem;
+            font-family: 'Noto Serif TC', serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .choice-btn:hover {
+            background: #151515;
+            border-left-color: #c0392b;
+            color: #fff;
+            padding-left: 25px;
+        }
+
+        .choice-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            border-left-color: #333;
+        }
+
+        /* Puzzle Input */
+        #puzzle-container {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+            background: #111;
+            padding: 15px;
+            border: 1px solid #333;
+        }
+        
+        #puzzle-input {
+            background: #000;
+            border: 1px solid #444;
+            color: #c0392b;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 1.2rem;
+            text-align: center;
+            letter-spacing: 5px;
+        }
+
+        #puzzle-submit {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+        }
+        
+        #puzzle-submit:hover {
+            background: #c0392b;
+        }
+
+        /* Animations */
+        @keyframes flicker {
+            0% { opacity: 1; } 3% { opacity: 0.1; } 6% { opacity: 1; }
+            7% { opacity: 0.1; } 9% { opacity: 1; } 100% { opacity: 1; }
+        }
+        .flicker-text { animation: flicker 4s infinite; }
+
+        @keyframes shake {
+            0% { transform: translate(0, 0); }
+            20% { transform: translate(-3px, 3px); }
+            40% { transform: translate(3px, -3px); }
+            60% { transform: translate(-3px, 0); }
+            80% { transform: translate(3px, 0); }
+            100% { transform: translate(0, 0); }
+        }
+        .shake-screen { animation: shake 0.4s ease-in-out; }
+
+        /* Ending Screen */
+        #end-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 100;
+            opacity: 0; pointer-events: none;
+            transition: opacity 3s;
+            padding: 40px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div class="vignette"></div>
+        <div class="blood-overlay" id="blood-fx"></div>
+
+        <div id="scene-area">
+            <div class="location-title" id="location-text">序章</div>
+            <div class="story-text" id="story-text">
+                （載入中...）
+            </div>
+            
+            <div id="puzzle-container">
+                <input type="text" id="puzzle-input" placeholder="CODE" maxlength="4">
+                <button id="puzzle-submit" onclick="submitPuzzle()">輸入</button>
+            </div>
+        </div>
+
+        <div id="inventory-bar"></div>
+        <div class="tooltip" id="tooltip"></div>
+
+        <div id="choices-area"></div>
+        
+        <div id="end-overlay">
+            <h1 id="end-title" style="color: #c0392b; font-size: 2rem;">結局</h1>
+            <p id="end-desc" style="color: #aaa; margin: 20px 0;">...</p>
+            <button class="choice-btn" onclick="location.reload()" style="margin-top:20px; text-align:center;">重新開始</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game Data ---
+        const state = {
+            scene: 'start',
+            inventory: [],
+            flags: {}
+        };
+
+        const items = {
+            'flashlight': { name: '手電筒', icon: '🔦', desc: '雖然微弱，但能照亮黑暗。' },
+            'key_basement': { name: '地下室鑰匙', icon: '🗝️', desc: '一把生鏽的舊鑰匙。' },
+            'crowbar': { name: '撬棍', icon: '🥖', desc: '堅固的鐵撬，可以撬開門或箱子。' },
+            'tape': { name: '絕緣膠帶', icon: '⚫', desc: '黑色膠帶，修復電線必備。' },
+            'fuse': { name: '保險絲', icon: '🔋', desc: '新的保險絲，規格似乎符合大門配電箱。' },
+            'note_fragment': { name: '密碼紙條', icon: '📄', desc: '上面寫著謎題的提示。' }
+        };
+
+        // Scene Definitions
+        const scenes = {
+            // --- Basement ---
+            'start': {
+                loc: '地下室',
+                text: '劇烈的頭痛讓你從昏迷中醒來。你躺在一張冰冷的手術台上。<br>空氣中瀰漫著福馬林和鐵鏽的味道。唯一的光源是頭頂搖搖欲墜的燈泡。<br>門邊有一個生鏽的鐵櫃，門被鎖死了。',
+                choices: [
+                    { text: '調查鐵櫃', next: 'cabinet' },
+                    { text: '調查鐵門', next: 'door_locked' },
+                    { text: '查看手術台', next: 'operating_table' }
+                ]
+            },
+            'operating_table': {
+                loc: '地下室',
+                text: '手術台上殘留著乾涸的血跡和束縛帶。在枕頭下面，你摸到了一個冰冷的金屬物體。<br>獲得了<span class="clue">地下室鑰匙</span>。',
+                action: () => addItem('key_basement'),
+                choices: [
+                    { text: '回去', next: 'start' }
+                ]
+            },
+            'cabinet': {
+                loc: '地下室',
+                text: '鐵櫃裡堆滿了令人作嘔的手術器具：骨鋸、手術刀、針筒...<br>在底層的架子上，你找到了一個還能用的<span class="clue">手電筒</span>。',
+                action: () => addItem('flashlight'),
+                choices: [
+                    { text: '打開手電筒照亮四周', next: 'basement_lit' }
+                ]
+            },
+            'basement_lit': {
+                loc: '地下室',
+                text: '手電筒的光束掃過牆壁。你看見牆上密密麻麻地刻滿了指甲抓痕。<br>「<span class="highlight">爸爸在說謊</span>」「<span class="highlight">不要看鏡子</span>」「<span class="highlight">救命</span>」<br>這些字跡讓你背脊發涼。',
+                choices: [
+                    { text: '嘗試用鑰匙開門', cond: () => has('key_basement'), next: 'door_open' },
+                    { text: '回到黑暗中', next: 'start' }
+                ]
+            },
+            'door_locked': {
+                loc: '地下室',
+                text: '鐵門緊鎖。鎖孔鏽跡斑斑。你需要鑰匙。',
+                choices: [
+                    { text: '回頭找找', next: 'start' }
+                ]
+            },
+            'door_open': {
+                loc: '地下室',
+                text: '鑰匙在鎖孔裡發出刺耳的摩擦聲，「喀嚓」一聲，門開了。<br>走廊的冷風吹了進來，帶著一股腐敗的氣味。',
+                choices: [
+                    { text: '離開地下室', next: 'corridor' }
+                ]
+            },
+
+            // --- Corridor ---
+            'corridor': {
+                loc: '一樓走廊',
+                text: '走廊兩側掛著歷代主人的肖像畫，但他們的眼睛都被惡意挖掉了。<br>左邊是<span class="clue">廚房</span>，右邊是一扇被木板封死的門（似乎是<span class="clue">浴室</span>），前方是<span class="clue">書房</span>。<br>走廊盡頭是<span class="clue">大門</span>。',
+                choices: [
+                    { text: '前往廚房', next: 'kitchen' },
+                    { text: '查看封死的浴室門', next: 'bathroom_door' },
+                    { text: '前往書房', next: 'study' },
+                    { text: '前往大門', next: 'main_door' }
+                ]
+            },
+
+            // --- Kitchen ---
+            'kitchen': {
+                loc: '腐敗廚房',
+                text: '廚房流理台上堆滿了發霉的餐具。地上有一大灘早已乾涸的黑色污漬。<br>冰箱門半開著，發出嗡嗡聲。角落的工具架上似乎有些東西。',
+                choices: [
+                    { text: '檢查工具架', next: 'kitchen_tools' },
+                    { text: '查看冰箱', next: 'kitchen_fridge' },
+                    { text: '回到走廊', next: 'corridor' }
+                ]
+            },
+            'kitchen_tools': {
+                loc: '腐敗廚房',
+                text: '工具架上大部分工具都不見了，只剩下一卷<span class="clue">絕緣膠帶</span>。<br>還有，在洗手台下方，你發現了一根<span class="clue">撬棍</span>卡在水管縫隙裡。',
+                action: () => { addItem('tape'); addItem('crowbar'); },
+                choices: [
+                    { text: '拿走物品', next: 'kitchen' }
+                ]
+            },
+            'kitchen_fridge': {
+                loc: '腐敗廚房',
+                text: '你拉開冰箱，一股惡臭撲面而來。<br>裡面沒有食物，只有一顆腐爛的豬頭（希望那是豬頭）。<br>豬頭的嘴裡塞著一張紙條，寫著：「<span class="highlight">浴室的鏡子看見了真相</span>」。',
+                choices: [
+                    { text: '關上冰箱', next: 'kitchen' }
+                ]
+            },
+
+            // --- Bathroom (Puzzle Chain Start) ---
+            'bathroom_door': {
+                loc: '走廊',
+                text: '浴室的門被幾根厚木板釘死了。裡面傳來滴答滴答的水聲。',
+                choices: [
+                    { text: '使用撬棍撬開', cond: () => has('crowbar'), next: 'bathroom_enter' },
+                    { text: '離開', next: 'corridor' }
+                ]
+            },
+            'bathroom_enter': {
+                loc: '血腥浴室',
+                text: '木板被撬開，發出巨大的碎裂聲。<br>浴室裡充滿了熱氣？不，是寒氣凝結的霧。<br>浴缸裡裝滿了暗紅色的液體，牆上的鏡子被水氣覆蓋。',
+                choices: [
+                    { text: '擦拭鏡子', next: 'bathroom_mirror' },
+                    { text: '檢查浴缸', next: 'bathroom_tub' },
+                    { text: '回到走廊', next: 'corridor' }
+                ]
+            },
+            'bathroom_mirror': {
+                loc: '血腥浴室',
+                text: '你用手擦去鏡子上的水氣。<br>鏡子上顯現出幾個血紅色的數字：<br><br><span class="highlight" style="font-size: 2rem; letter-spacing: 10px;">7 3 9</span><br><br>這似乎是某種密碼。',
+                choices: [
+                    { text: '記住密碼', next: 'bathroom_enter' }
+                ]
+            },
+            'bathroom_tub': {
+                loc: '血腥浴室',
+                text: '浴缸裡的血水深不見底。你隱約看見水底有東西。<br>你必須伸手進去...<br>你深吸一口氣，將手伸入冰冷的血水中。',
+                effect: 'shake', // small scare
+                text_append: '<br>如果你再摸索久一點，好像有隻手抓住了你！<br>你猛地抽回手，什麼都沒有。但你並沒有找到任何東西。看來這裡只是嚇唬人的。',
+                choices: [
+                    { text: '退後', next: 'bathroom_enter' }
+                ]
+            },
+
+            // --- Study (Puzzle Chain Mid) ---
+            'study': {
+                loc: '書房',
+                text: '書房裡書架倒塌，滿地狼藉。桌上有一本日記。<br>牆角有一個<span class="clue">小型保險箱</span>，需要輸入三位數密碼。',
+                choices: [
+                    { text: '閱讀日記', next: 'study_diary' },
+                    { text: '嘗試開啟保險箱', next: 'safe_puzzle' },
+                    { text: '回到走廊', next: 'corridor' }
+                ]
+            },
+            'study_diary': {
+                loc: '書房',
+                text: '日記本：「12月24日。實驗失敗了。兒子變得不再是他了...他殺了媽媽。」<br>「我把大門的電子鎖密碼設為了那該死的實驗代號。提示就在我的畫作裡。」<br>「<span class="highlight">眼睛 x 手指 + 10</span>」',
+                choices: [
+                    { text: '放下日記', next: 'study' }
+                ]
+            },
+            'safe_puzzle': {
+                loc: '書房',
+                text: '保險箱上有一個數字轉盤。需要三個數字。',
+                puzzle: { answer: '739', next: 'safe_open' },
+                choices: [
+                    { text: '輸入密碼', action: 'puzzle' },
+                    { text: '放棄', next: 'study' }
+                ]
+            },
+            'safe_open': {
+                loc: '書房',
+                text: '「喀」一聲，保險箱打開了。<br>裡面放著一個全新的<span class="clue">保險絲</span>。<br>這正是大門配電箱缺少的零件！',
+                action: () => addItem('fuse'),
+                choices: [
+                    { text: '拿走保險絲', next: 'study' }
+                ]
+            },
+
+            // --- Main Door (Final Puzzle) ---
+            'main_door': {
+                loc: '大門',
+                text: '厚重的金屬大門是通往自由的唯一路徑。<br>旁邊的配電箱外蓋打開著，裡面的電線被剪斷了，而且缺少保險絲。<br>電子鎖屏幕是黑的。',
+                choices: [
+                    { text: '修理配電箱', next: 'fix_box_check' },
+                    { text: '回到走廊', next: 'corridor' }
+                ]
+            },
+            'fix_box_check': {
+                loc: '大門配電箱',
+                text: '你需要修復電路。你需要：<br>1. 連接斷掉的電線。<br>2. 安裝新的保險絲。',
+                choices: [
+                    { text: '使用絕緣膠帶接線', cond: () => has('tape') && !state.flags.wired, action: () => state.flags.wired = true, next: 'fix_box_process' },
+                    { text: '安裝保險絲', cond: () => has('fuse') && !state.flags.fused, action: () => state.flags.fused = true, next: 'fix_box_process' },
+                    { text: '啟動電源', cond: () => state.flags.wired && state.flags.fused, next: 'door_power_on' },
+                    { text: '還缺材料', cond: () => !has('tape') || !has('fuse'), next: 'corridor' }
+                ]
+            },
+            'fix_box_process': {
+                loc: '大門配電箱',
+                text: '你正在修理配電箱...<br>即使手在發抖，你還是完成了操作。',
+                choices: [
+                    { text: '繼續修理', next: 'fix_box_check' }
+                ]
+            },
+            'door_power_on': {
+                loc: '大門',
+                text: '隨著電流聲響起，電子鎖的紅燈亮了！<br>屏幕顯示：「輸入實驗代號」。<br>提示回想：日記裡寫著「<span class="highlight">眼睛 x 手指 + 10</span>」。<br>（提示：走廊有3幅肖像畫，每幅畫2隻眼睛，共6隻。人有10根手指。）',
+                // Calculation: (6 eyes * 10 fingers) + 10 = 70.
+                puzzle: { answer: '70', next: 'escape' }, 
+                choices: [
+                    { text: '輸入密碼', action: 'puzzle' },
+                    { text: '再想想', next: 'corridor' }
+                ]
+            },
+            'escape': {
+                loc: '結局',
+                text: '密碼正確。「嗶」的一聲長音，大門解鎖了。<br>你推開沉重的大門，外面的暴雨打在你的臉上。<br>你拼命地跑，身後宅邸裡似乎傳來了憤怒的咆哮聲，但你再也沒有回頭。',
+                ending: { title: '生還者', desc: '你成功逃離了怨宅，結束了這場噩夢。' }
+            }
+        };
+
+        // --- Core Functions ---
+
+        function has(itemId) {
+            return state.inventory.includes(itemId);
+        }
+
+        function addItem(itemId) {
+            if (!has(itemId)) {
+                state.inventory.push(itemId);
+                renderInventory();
+                showTooltip(`獲得：${items[itemId].name}`);
+            }
+        }
+
+        function showTooltip(text) {
+            const el = document.getElementById('tooltip');
+            el.innerText = text;
+            el.style.opacity = 1;
+            setTimeout(() => el.style.opacity = 0, 3000);
+        }
+
+        function renderInventory() {
+            const bar = document.getElementById('inventory-bar');
+            bar.innerHTML = '';
+            state.inventory.forEach(id => {
+                const item = items[id];
+                const el = document.createElement('div');
+                el.className = 'inv-item';
+                el.innerText = item.icon;
+                
+                // Tooltip on hover
+                el.onmouseenter = () => showTooltip(item.name + ": " + item.desc);
+                el.onmouseleave = () => document.getElementById('tooltip').style.opacity = 0;
+                
+                bar.appendChild(el);
+            });
+        }
+
+        function renderScene(sceneId) {
+            const scene = scenes[sceneId];
+            if (!scene) return console.error('Scene missing:', sceneId);
+
+            state.scene = sceneId;
+
+            // Update UI
+            document.getElementById('location-text').innerText = scene.loc;
+            
+            // Handle append text if refreshing scene
+            const textEl = document.getElementById('story-text');
+            textEl.innerHTML = scene.text + (scene.text_append || '');
+            delete scene.text_append; // Clear append after showing once
+
+            // Effects
+            const container = document.getElementById('game-container');
+            container.className = ''; // Reset classes
+            if (scene.effect === 'shake') {
+                container.classList.add('shake-screen');
+                document.getElementById('blood-fx').style.opacity = 0.8;
+                setTimeout(() => document.getElementById('blood-fx').style.opacity = 0, 500);
+            }
+
+            // Actions
+            if (scene.action && typeof scene.action === 'function') {
+                scene.action();
+            }
+
+            // Ending?
+            if (scene.ending) {
+                document.getElementById('end-overlay').style.opacity = 1;
+                document.getElementById('end-overlay').style.pointerEvents = 'auto';
+                document.getElementById('end-title').innerText = scene.ending.title;
+                document.getElementById('end-desc').innerText = scene.ending.desc;
+                return;
+            }
+
+            // Render Choices or Puzzle
+            const choicesArea = document.getElementById('choices-area');
+            const puzzleDiv = document.getElementById('puzzle-container');
+            choicesArea.innerHTML = '';
+            puzzleDiv.style.display = 'none';
+
+            if (scene.puzzle && scene.choices.find(c => c.action === 'puzzle')) {
+                // Puzzle Mode
+                window.currentPuzzle = scene.puzzle;
+                document.getElementById('puzzle-input').value = '';
+                
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.innerText = '輸入密碼';
+                btn.onclick = () => {
+                    puzzleDiv.style.display = 'flex';
+                    choicesArea.style.display = 'none';
+                    document.getElementById('puzzle-input').focus();
+                };
+                choicesArea.appendChild(btn);
+
+                const backBtn = document.createElement('button');
+                backBtn.className = 'choice-btn';
+                backBtn.innerText = '返回';
+                backBtn.onclick = () => {
+                     // Find the non-puzzle exit
+                     const exit = scene.choices.find(c => c.action !== 'puzzle');
+                     if(exit) renderScene(exit.next);
+                };
+                choicesArea.appendChild(backBtn);
+
+            } else {
+                // Normal Choice Mode
+                choicesArea.style.display = 'flex';
+                scene.choices.forEach(c => {
+                    if (c.cond && !c.cond()) return; // Skip if condition not met
+
+                    const btn = document.createElement('button');
+                    btn.className = 'choice-btn';
+                    btn.innerText = c.text;
+                    if (c.action && typeof c.action === 'function') {
+                        btn.onclick = () => { c.action(); renderScene(c.next); };
+                    } else {
+                        btn.onclick = () => renderScene(c.next);
+                    }
+                    choicesArea.appendChild(btn);
+                });
+            }
+        }
+
+        // Puzzle Logic
+        function submitPuzzle() {
+            const input = document.getElementById('puzzle-input');
+            const val = input.value.trim();
+            const puzzle = window.currentPuzzle;
+            const choicesArea = document.getElementById('choices-area');
+            const puzzleDiv = document.getElementById('puzzle-container');
+
+            if (val === puzzle.answer) {
+                puzzleDiv.style.display = 'none';
+                choicesArea.style.display = 'flex';
+                renderScene(puzzle.next);
+            } else {
+                input.value = '';
+                input.placeholder = '錯誤';
+                document.getElementById('game-container').classList.add('shake-screen');
+                setTimeout(() => document.getElementById('game-container').classList.remove('shake-screen'), 500);
+            }
+        }
+
+        // Init
+        renderScene('start');
+
+    </script>
+</body>
+</html>
